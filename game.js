@@ -180,10 +180,25 @@ function updateScoreDisplay() {
 }
 
 function playSound(sound) {
+    if (!sound) {
+        console.error("Sound element is null or undefined");
+        return;
+    }
+    console.log(`Attempting to play sound: ${sound.id}`);
     sound.currentTime = 0;
-    sound.play().catch(error => {
-        console.log("Error playing sound:", error);
-        document.body.addEventListener('click', () => sound.play(), { once: true });
+    sound.play().then(() => {
+        console.log(`Sound played successfully: ${sound.id}`);
+    }).catch(error => {
+        console.error(`Error playing sound ${sound.id}:`, error);
+        // Fallback: Try playing on the next user interaction
+        document.body.addEventListener('click', () => {
+            console.log(`Retrying sound playback for ${sound.id} on user click`);
+            sound.play().then(() => {
+                console.log(`Sound played successfully on retry: ${sound.id}`);
+            }).catch(retryError => {
+                console.error(`Retry failed for ${sound.id}:`, retryError);
+            });
+        }, { once: true });
     });
 }
 
@@ -413,6 +428,12 @@ function restartGame() {
 
 // DOMContentLoaded event listener
 document.addEventListener('DOMContentLoaded', () => {
+    // Sound effects
+    const shootSound = document.getElementById('shootSound');
+    const buildSound = document.getElementById('buildSound');
+    const attackSound = document.getElementById('attackSound');
+    const gameoverSound = document.getElementById('gameoverSound');
+
     applyDifficulty();
 
     const difficultySelect = document.getElementById('difficultySelect');
