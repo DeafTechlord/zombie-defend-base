@@ -178,13 +178,12 @@ function updateScoreDisplay() {
         scoreDisplay.textContent = `Score: ${score}`;
     }
 }
-
 function playSound(sound) {
     if (!sound) {
         console.error("Sound element is null or undefined");
         return;
     }
-    console.log(`Attempting to play sound: ${sound.id}`);
+    console.log(`Attempting to play sound: ${sound.id}, src: ${sound.src}`);
     sound.currentTime = 0;
     sound.play().then(() => {
         console.log(`Sound played successfully: ${sound.id}`);
@@ -427,13 +426,205 @@ function restartGame() {
 }
 
 // DOMContentLoaded event listener
+// Sound effects (move inside DOMContentLoaded to ensure DOM is ready)
 document.addEventListener('DOMContentLoaded', () => {
-    // Sound effects
     const shootSound = document.getElementById('shootSound');
     const buildSound = document.getElementById('buildSound');
     const attackSound = document.getElementById('attackSound');
     const gameoverSound = document.getElementById('gameoverSound');
 
+    // Preload audio files after user interaction
+    function preloadAudio() {
+        const sounds = [shootSound, buildSound, attackSound, gameoverSound];
+        sounds.forEach(sound => {
+            if (!sound) {
+                console.error(`Sound element not found: ${sound ? sound.id : 'undefined'}`);
+                return;
+            }
+            console.log(`Preloading sound: ${sound.id}`);
+            sound.load(); // Ensure the audio file is loaded
+            sound.play().then(() => {
+                sound.pause(); // Immediately pause to unlock for later playback
+                sound.currentTime = 0; // Reset to start
+                console.log(`Successfully preloaded sound: ${sound.id}`);
+            }).catch(error => {
+                console.error(`Error preloading sound ${sound.id}:`, error);
+                // Fallback: Unlock on the next user interaction
+                document.body.addEventListener('click', () => {
+                    console.log(`Retrying preload for ${sound.id} on user click`);
+                    sound.play().then(() => {
+                        sound.pause();
+                        sound.currentTime = 0;
+                        console.log(`Sound ${sound.id} unlocked on user click`);
+                    }).catch(retryError => {
+                        console.error(`Retry preload failed for ${sound.id}:`, retryError);
+                    });
+                }, { once: true });
+            });
+        });
+    }
+
+    function startGame() {
+        const difficultySelect = document.getElementById('difficultySelect');
+        if (difficultySelect) {
+            difficulty = difficultySelect.value;
+            applyDifficulty();
+            console.log("Game started with difficulty:", difficulty);
+        }
+
+        const startScreen = document.getElementById('startScreen');
+        if (startScreen) {
+            startScreen.style.display = 'none';
+            console.log("Start screen hidden, display:", startScreen.style.display);
+        }
+
+        // Preload audio files after user interaction (clicking "Start Game")
+        preloadAudio();
+
+        // Rest of the startGame function...
+        const gameUI = document.getElementById('gameUI');
+        if (gameUI) {
+            const restartButton = document.getElementById('restartButton');
+            Array.from(gameUI.children).forEach(child => {
+                if (child !== restartButton) {
+                    gameUI.removeChild(child);
+                }
+            });
+
+            healthDisplay = document.createElement('div');
+            healthDisplay.id = 'healthDisplay';
+            healthDisplay.style.position = 'absolute';
+            healthDisplay.style.top = '10px';
+            healthDisplay.style.left = '10px';
+            healthDisplay.style.color = 'white';
+            healthDisplay.style.fontSize = '24px';
+            healthDisplay.style.fontFamily = 'Arial';
+            healthDisplay.style.zIndex = '1001';
+            healthDisplay.style.opacity = '1';
+            healthDisplay.style.visibility = 'visible';
+            healthDisplay.textContent = `Base Health: ${baseHealth}`;
+            gameUI.appendChild(healthDisplay);
+
+            woodDisplay = document.createElement('div');
+            woodDisplay.id = 'woodDisplay';
+            woodDisplay.style.position = 'absolute';
+            woodDisplay.style.top = '40px';
+            woodDisplay.style.left = '10px';
+            woodDisplay.style.color = 'white';
+            woodDisplay.style.fontSize = '24px';
+            woodDisplay.style.fontFamily = 'Arial';
+            woodDisplay.style.zIndex = '1001';
+            woodDisplay.style.opacity = '1';
+            woodDisplay.style.visibility = 'visible';
+            woodDisplay.textContent = `Wood: ${wood}`;
+            gameUI.appendChild(woodDisplay);
+
+            metalDisplay = document.createElement('div');
+            metalDisplay.id = 'metalDisplay';
+            metalDisplay.style.position = 'absolute';
+            metalDisplay.style.top = '70px';
+            metalDisplay.style.left = '10px';
+            metalDisplay.style.color = 'white';
+            metalDisplay.style.fontSize = '24px';
+            metalDisplay.style.fontFamily = 'Arial';
+            metalDisplay.style.zIndex = '1001';
+            metalDisplay.style.opacity = '1';
+            metalDisplay.style.visibility = 'visible';
+            metalDisplay.textContent = `Metal: ${metal}`;
+            gameUI.appendChild(metalDisplay);
+
+            buildModeDisplay = document.createElement('div');
+            buildModeDisplay.id = 'buildModeDisplay';
+            buildModeDisplay.style.position = 'absolute';
+            buildModeDisplay.style.top = '100px';
+            buildModeDisplay.style.left = '10px';
+            buildModeDisplay.style.color = 'white';
+            buildModeDisplay.style.fontSize = '20px';
+            buildModeDisplay.style.fontFamily = 'Arial';
+            buildModeDisplay.style.zIndex = '1001';
+            buildModeDisplay.style.opacity = '1';
+            buildModeDisplay.style.visibility = 'visible';
+            buildModeDisplay.textContent = "Press B to Build Wood, M to Build Metal";
+            gameUI.appendChild(buildModeDisplay);
+
+            scoreDisplay = document.createElement('div');
+            scoreDisplay.id = 'scoreDisplay';
+            scoreDisplay.style.position = 'absolute';
+            scoreDisplay.style.top = '130px';
+            scoreDisplay.style.left = '10px';
+            scoreDisplay.style.color = 'white';
+            scoreDisplay.style.fontSize = '24px';
+            scoreDisplay.style.fontFamily = 'Arial';
+            scoreDisplay.style.zIndex = '1001';
+            scoreDisplay.style.opacity = '1';
+            scoreDisplay.style.visibility = 'visible';
+            scoreDisplay.textContent = `Score: ${score}`;
+            gameUI.appendChild(scoreDisplay);
+
+            if (!restartButton) {
+                const newRestartButton = document.createElement('button');
+                newRestartButton.id = 'restartButton';
+                newRestartButton.style.position = 'absolute';
+                newRestartButton.style.top = '160px';
+                newRestartButton.style.left = '10px';
+                newRestartButton.style.padding = '10px';
+                newRestartButton.style.fontSize = '16px';
+                newRestartButton.style.display = 'none';
+                newRestartButton.style.zIndex = '1001';
+                newRestartButton.style.pointerEvents = 'auto';
+                newRestartButton.style.backgroundColor = '#4CAF50';
+                newRestartButton.style.color = 'white';
+                newRestartButton.style.border = 'none';
+                newRestartButton.style.borderRadius = '5px';
+                newRestartButton.style.cursor = 'pointer';
+                newRestartButton.style.opacity = '1';
+                newRestartButton.style.visibility = 'visible';
+                newRestartButton.textContent = "Restart Game";
+                newRestartButton.addEventListener('click', () => {
+                    console.log("Restart button clicked (direct listener)");
+                    restartGame();
+                });
+                gameUI.appendChild(newRestartButton);
+                console.log("Restart button created and appended to gameUI");
+            } else {
+                restartButton.style.display = 'none';
+                restartButton.style.zIndex = '1001';
+                restartButton.style.opacity = '1';
+                restartButton.style.visibility = 'visible';
+                gameUI.appendChild(restartButton);
+                console.log("Existing restart button reattached with display: none");
+            }
+
+            gameUI.style.display = 'block';
+            gameUI.style.pointerEvents = 'auto';
+            gameUI.style.opacity = '1';
+            gameUI.style.visibility = 'visible';
+            console.log("Game UI shown, display:", gameUI.style.display);
+        }
+
+        player = new THREE.Mesh(playerGeometry, playerMaterial);
+        player.position.set(0, 0.5, 5);
+        scene.add(player);
+
+        gameInProgress = true;
+
+        for (let i = 0; i < 3; i++) {
+            spawnZombie();
+        }
+
+        clearInterval(spawnInterval);
+        spawnInterval = setInterval(() => {
+            for (let i = 0; i < 3; i++) {
+                spawnZombie();
+            }
+        }, difficultySettings[difficulty].spawnInterval);
+
+        if (difficultySelect) {
+            difficultySelect.disabled = true;
+        }
+    }
+
+    // Rest of the DOMContentLoaded logic...
     applyDifficulty();
 
     const difficultySelect = document.getElementById('difficultySelect');
@@ -463,189 +654,6 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("Could not find startButton element!");
     }
 });
-
-// Sound effects
-const shootSound = document.getElementById('shootSound');
-const buildSound = document.getElementById('buildSound');
-const attackSound = document.getElementById('attackSound');
-const gameoverSound = document.getElementById('gameoverSound');
-
-// Preload audio files after user interaction
-function preloadAudio() {
-    const sounds = [shootSound, buildSound, attackSound, gameoverSound];
-    sounds.forEach(sound => {
-        if (sound) {
-            sound.load(); // Ensure the audio file is loaded
-            sound.play().then(() => {
-                sound.pause(); // Immediately pause to unlock for later playback
-                sound.currentTime = 0; // Reset to start
-                console.log(`Preloaded sound: ${sound.id}`);
-            }).catch(error => {
-                console.log(`Error preloading sound ${sound.id}:`, error);
-            });
-        }
-    });
-}
-
-function startGame() {
-    const difficultySelect = document.getElementById('difficultySelect');
-    if (difficultySelect) {
-        difficulty = difficultySelect.value;
-        applyDifficulty();
-        console.log("Game started with difficulty:", difficulty);
-    }
-
-    const startScreen = document.getElementById('startScreen');
-    if (startScreen) {
-        startScreen.style.display = 'none';
-        console.log("Start screen hidden, display:", startScreen.style.display);
-    }
-
-    // Preload audio files after user interaction (clicking "Start Game")
-    preloadAudio();
-
-    // Rest of the startGame function...
-    const gameUI = document.getElementById('gameUI');
-    if (gameUI) {
-        const restartButton = document.getElementById('restartButton');
-        Array.from(gameUI.children).forEach(child => {
-            if (child !== restartButton) {
-                gameUI.removeChild(child);
-            }
-        });
-
-        healthDisplay = document.createElement('div');
-        healthDisplay.id = 'healthDisplay';
-        healthDisplay.style.position = 'absolute';
-        healthDisplay.style.top = '10px';
-        healthDisplay.style.left = '10px';
-        healthDisplay.style.color = 'white';
-        healthDisplay.style.fontSize = '24px';
-        healthDisplay.style.fontFamily = 'Arial';
-        healthDisplay.style.zIndex = '1001';
-        healthDisplay.style.opacity = '1';
-        healthDisplay.style.visibility = 'visible';
-        healthDisplay.textContent = `Base Health: ${baseHealth}`;
-        gameUI.appendChild(healthDisplay);
-
-        woodDisplay = document.createElement('div');
-        woodDisplay.id = 'woodDisplay';
-        woodDisplay.style.position = 'absolute';
-        woodDisplay.style.top = '40px';
-        woodDisplay.style.left = '10px';
-        woodDisplay.style.color = 'white';
-        woodDisplay.style.fontSize = '24px';
-        healthDisplay.style.fontFamily = 'Arial';
-        woodDisplay.style.zIndex = '1001';
-        woodDisplay.style.opacity = '1';
-        woodDisplay.style.visibility = 'visible';
-        woodDisplay.textContent = `Wood: ${wood}`;
-        gameUI.appendChild(woodDisplay);
-
-        metalDisplay = document.createElement('div');
-        metalDisplay.id = 'metalDisplay';
-        metalDisplay.style.position = 'absolute';
-        metalDisplay.style.top = '70px';
-        metalDisplay.style.left = '10px';
-        metalDisplay.style.color = 'white';
-        metalDisplay.style.fontSize = '24px';
-        metalDisplay.style.fontFamily = 'Arial';
-        metalDisplay.style.zIndex = '1001';
-        metalDisplay.style.opacity = '1';
-        metalDisplay.style.visibility = 'visible';
-        metalDisplay.textContent = `Metal: ${metal}`;
-        gameUI.appendChild(metalDisplay);
-
-        buildModeDisplay = document.createElement('div');
-        buildModeDisplay.id = 'buildModeDisplay';
-        buildModeDisplay.style.position = 'absolute';
-        buildModeDisplay.style.top = '100px';
-        buildModeDisplay.style.left = '10px';
-        buildModeDisplay.style.color = 'white';
-        buildModeDisplay.style.fontSize = '20px';
-        buildModeDisplay.style.fontFamily = 'Arial';
-        buildModeDisplay.style.zIndex = '1001';
-        buildModeDisplay.style.opacity = '1';
-        buildModeDisplay.style.visibility = 'visible';
-        buildModeDisplay.textContent = "Press B to Build Wood, M to Build Metal";
-        gameUI.appendChild(buildModeDisplay);
-
-        scoreDisplay = document.createElement('div');
-        scoreDisplay.id = 'scoreDisplay';
-        scoreDisplay.style.position = 'absolute';
-        scoreDisplay.style.top = '130px';
-        scoreDisplay.style.left = '10px';
-        scoreDisplay.style.color = 'white';
-        scoreDisplay.style.fontSize = '24px';
-        scoreDisplay.style.fontFamily = 'Arial';
-        scoreDisplay.style.zIndex = '1001';
-        scoreDisplay.style.opacity = '1';
-        scoreDisplay.style.visibility = 'visible';
-        scoreDisplay.textContent = `Score: ${score}`;
-        gameUI.appendChild(scoreDisplay);
-
-        if (!restartButton) {
-            const newRestartButton = document.createElement('button');
-            newRestartButton.id = 'restartButton';
-            newRestartButton.style.position = 'absolute';
-            newRestartButton.style.top = '160px';
-            newRestartButton.style.left = '10px';
-            newRestartButton.style.padding = '10px';
-            newRestartButton.style.fontSize = '16px';
-            newRestartButton.style.display = 'none';
-            newRestartButton.style.zIndex = '1001';
-            newRestartButton.style.pointerEvents = 'auto';
-            newRestartButton.style.backgroundColor = '#4CAF50';
-            newRestartButton.style.color = 'white';
-            newRestartButton.style.border = 'none';
-            newRestartButton.style.borderRadius = '5px';
-            newRestartButton.style.cursor = 'pointer';
-            newRestartButton.style.opacity = '1';
-            newRestartButton.style.visibility = 'visible';
-            newRestartButton.textContent = "Restart Game";
-            newRestartButton.addEventListener('click', () => {
-                console.log("Restart button clicked (direct listener)");
-                restartGame();
-            });
-            gameUI.appendChild(newRestartButton);
-            console.log("Restart button created and appended to gameUI");
-        } else {
-            restartButton.style.display = 'none';
-            restartButton.style.zIndex = '1001';
-            restartButton.style.opacity = '1';
-            restartButton.style.visibility = 'visible';
-            gameUI.appendChild(restartButton);
-            console.log("Existing restart button reattached with display: none");
-        }
-
-        gameUI.style.display = 'block';
-        gameUI.style.pointerEvents = 'auto';
-        gameUI.style.opacity = '1';
-        gameUI.style.visibility = 'visible';
-        console.log("Game UI shown, display:", gameUI.style.display);
-    }
-
-    player = new THREE.Mesh(playerGeometry, playerMaterial);
-    player.position.set(0, 0.5, 5);
-    scene.add(player);
-
-    gameInProgress = true;
-
-    for (let i = 0; i < 3; i++) {
-        spawnZombie();
-    }
-
-    clearInterval(spawnInterval);
-    spawnInterval = setInterval(() => {
-        for (let i = 0; i < 3; i++) {
-            spawnZombie();
-        }
-    }, difficultySettings[difficulty].spawnInterval);
-
-    if (difficultySelect) {
-        difficultySelect.disabled = true;
-    }
-}
 
 let spawnInterval;
 
