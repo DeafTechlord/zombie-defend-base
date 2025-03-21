@@ -3,6 +3,7 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
+// Create a separate container for the renderer
 const rendererContainer = document.createElement('div');
 rendererContainer.id = 'rendererContainer';
 document.body.appendChild(rendererContainer);
@@ -56,7 +57,7 @@ const difficultySettings = {
 };
 
 // Build mode and rotation toggle
-let buildMode = false;
+let buildMode = false; // Can be false, "wood", or "metal"
 let buildModeDisplay;
 let rotationAngle = 0;
 
@@ -244,7 +245,7 @@ function startGame() {
         metalDisplay.style.left = '10px';
         metalDisplay.style.color = 'white';
         metalDisplay.style.fontSize = '24px';
-        metalDisplay.style.fontFamily = 'Arial';
+        healthDisplay.style.fontFamily = 'Arial';
         metalDisplay.style.zIndex = '1001';
         metalDisplay.style.opacity = '1';
         metalDisplay.style.visibility = 'visible';
@@ -324,7 +325,7 @@ function startGame() {
     player.position.set(0, 0.5, 5);
     scene.add(player);
 
-    gameInProgress = true;
+    gameInProgress = true; // Moved to before spawning zombies
 
     for (let i = 0; i < 3; i++) {
         spawnZombie();
@@ -533,7 +534,7 @@ document.addEventListener('keyup', (event) => {
 
 // Zombie array and spawn function
 const zombies = [];
-const zombieGeometry = new THREE.BoxGeometry(2, 2, 2);
+const zombieGeometry = new THREE.BoxGeometry(1, 1, 1);
 
 function spawnZombie() {
     if (!gameInProgress) {
@@ -551,40 +552,38 @@ function spawnZombie() {
     zombie.lastAttack = 0;
 
     const rand = Math.random();
-    if (rand < 0.4) {
+    if (rand < 0.4) { // 40% chance for normal zombie
         zombie.type = "normal";
         zombie.speed = 0.03;
-        zombie.health = 20;
-        zombie.maxHealth = 20;
+        zombie.health = 20; // Normal zombie: 2 hits to kill (10 damage per hit)
+        zombie.maxHealth = 20; // Store max health for color scaling
         zombie.damage = difficultySettings[difficulty].zombieDamage;
-        zombie.material = new THREE.MeshBasicMaterial({ color: 0xFF0000 });
+        zombie.material = new THREE.MeshBasicMaterial({ color: 0xFF0000 }); // Red
         zombie.drops = { wood: 7, metal: 2 };
-    } else if (rand < 0.6) {
+    } else if (rand < 0.6) { // 20% chance for strong zombie
         zombie.type = "strong";
         zombie.speed = 0.02;
-        zombie.health = 40;
+        zombie.health = 40; // Strong zombie: 4 hits to kill
         zombie.maxHealth = 40;
         zombie.damage = difficultySettings[difficulty].zombieDamage * 2;
-        zombie.material = new THREE.MeshBasicMaterial({ color: 0x800000 });
+        zombie.material = new THREE.MeshBasicMaterial({ color: 0x800000 }); // Dark red
         zombie.drops = { wood: 10, metal: 5 };
-    } else if (rand < 0.9) {
+    } else if (rand < 0.9) { // 30% chance for fast zombie
         zombie.type = "fast";
         zombie.speed = 0.08;
-        zombie.health = 10;
+        zombie.health = 10; // Fast zombie: 1 hit to kill
         zombie.maxHealth = 10;
         zombie.damage = difficultySettings[difficulty].zombieDamage * 0.5;
-        zombie.material = new THREE.MeshBasicMaterial({ color: 0x800080 });
+        zombie.material = new THREE.MeshBasicMaterial({ color: 0x800080 }); // Purple
         zombie.drops = { wood: 5, metal: 1 };
-    } else {
+    } else { // 10% chance for tank zombie
         zombie.type = "tank";
-        zombie.speed = 0.01;
-        zombie.health = 100;
+        zombie.speed = 0.01; // Very slow
+        zombie.health = 100; // Tank zombie: 10 hits to kill
         zombie.maxHealth = 100;
-        zombie.damage = difficultySettings[difficulty].zombieDamage * 3;
-        zombie.material = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
-        zombie.drops = { wood: 20, metal: 10 };
-        zombie.scale.set(1.5, 1.5, 1.5);
-        zombie.position.y = 1.5;
+        zombie.damage = difficultySettings[difficulty].zombieDamage * 3; // High damage
+        zombie.material = new THREE.MeshBasicMaterial({ color: 0x00FF00 }); // Green for tank
+        zombie.drops = { wood: 20, metal: 10 }; // Higher rewards
     }
 
     zombie.geometry.computeBoundingBox();
@@ -628,6 +627,7 @@ function updateZombies() {
             if (distanceToWall < 2) {
                 canMove = false;
                 if (currentTime - zombie.lastAttack >= 1000) {
+                    // Tank zombies deal more damage to walls
                     const wallDamage = zombie.type === "tank" ? 20 : 10;
                     wall.health -= wallDamage;
                     zombie.lastAttack = currentTime;
@@ -653,8 +653,9 @@ function updateZombies() {
         } else if (distanceToBase <= 0.5 && !attackedWall) {
             baseHealth -= zombie.damage;
             console.log(`Zombie reached base, dealing damage: ${zombie.damage}, New baseHealth: ${baseHealth}`);
-            base.material.color.set(0xFF0000);
-            setTimeout(() => base.material.color.set(0x808080), 200);
+            // Add visual feedback
+            base.material.color.set(0xFF0000); // Turn base red temporarily
+            setTimeout(() => base.material.color.set(0x808080), 200); // Reset color after 200ms
             updateHealthDisplay();
             scene.remove(zombie);
             zombies.splice(index, 1);
@@ -739,28 +740,30 @@ document.addEventListener('click', () => {
         });
         if (intersects.length > 0) {
             const zombie = intersects[0].object;
-            const damage = 10;
+            // Deal damage to the zombie
+            const damage = 10; // 10 damage per hit
             zombie.health -= damage;
             console.log(`Zombie hit! Type: ${zombie.type}, Health: ${zombie.health}/${zombie.maxHealth}`);
 
+            // Update zombie color based on health (from original color to darker shade)
             const healthRatio = zombie.health / zombie.maxHealth;
             let originalColor;
             switch (zombie.type) {
                 case "normal":
-                    originalColor = 0xFF0000;
+                    originalColor = 0xFF0000; // Red
                     break;
                 case "strong":
-                    originalColor = 0x800000;
+                    originalColor = 0x800000; // Dark red
                     break;
                 case "fast":
-                    originalColor = 0x800080;
+                    originalColor = 0x800080; // Purple
                     break;
                 case "tank":
-                    originalColor = 0x00FF00;
+                    originalColor = 0x00FF00; // Green
                     break;
             }
             const color = new THREE.Color(originalColor);
-            color.multiplyScalar(healthRatio);
+            color.multiplyScalar(healthRatio); // Darken as health decreases
             zombie.material.color.set(color);
 
             if (zombie.health <= 0) {
@@ -779,7 +782,9 @@ document.addEventListener('click', () => {
                 console.log("Score increased to:", score);
                 playSound(shootSound);
             } else {
+                // Play a hit sound or visual effect if the zombie is still alive
                 console.log(`Zombie still alive! Health remaining: ${zombie.health}`);
+                // Optionally play a different sound for a hit (e.g., a "hit" sound)
             }
         } else {
             console.log("No zombies hit. Camera position:", camera.position, "Looking at:", camera.getWorldDirection(new THREE.Vector3()));
