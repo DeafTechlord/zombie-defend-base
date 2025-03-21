@@ -3,7 +3,6 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
-// Create a separate container for the renderer
 const rendererContainer = document.createElement('div');
 rendererContainer.id = 'rendererContainer';
 document.body.appendChild(rendererContainer);
@@ -57,7 +56,7 @@ const difficultySettings = {
 };
 
 // Build mode and rotation toggle
-let buildMode = false; // Can be false, "wood", or "metal"
+let buildMode = false;
 let buildModeDisplay;
 let rotationAngle = 0;
 
@@ -187,281 +186,6 @@ function playSound(sound) {
     });
 }
 
-// Add at the top of game.js
-let isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
-function isMobileDevice() {
-    return window.innerWidth <= 768 || /Mobi|Android/i.test(navigator.userAgent);
-}
-
-function adjustCameraForDevice() {
-    const isMobile = isMobileDevice();
-    camera.fov = isMobile ? 60 : 90;
-    camera.updateProjectionMatrix();
-}
-
-// Simulate key presses for touch controls
-function simulateKey(key, isPressed) {
-    switch (key) {
-        case 'w': moveForward = isPressed; break;
-        case 's': moveBackward = isPressed; break;
-        case 'a': moveLeft = isPressed; break;
-        case 'd': moveRight = isPressed; break;
-        case 'b':
-            if (isPressed) {
-                if (buildMode === "wood") {
-                    buildMode = false;
-                } else {
-                    buildMode = "wood";
-                }
-                if (buildModeDisplay) {
-                    if (buildMode === "wood") {
-                        buildModeDisplay.textContent = "Build Mode: Tap to place wooden wall (Cost: 5 wood), Rotate to rotate";
-                    } else if (buildMode === "metal") {
-                        buildModeDisplay.textContent = "Build Mode: Tap to place metal wall (Cost: 3 metal), Rotate to rotate";
-                    } else {
-                        buildModeDisplay.textContent = "Tap Wood or Metal to Build";
-                    }
-                }
-            }
-            break;
-        case 'm':
-            if (isPressed) {
-                if (buildMode === "metal") {
-                    buildMode = false;
-                } else {
-                    buildMode = "metal";
-                }
-                if (buildModeDisplay) {
-                    if (buildMode === "wood") {
-                        buildModeDisplay.textContent = "Build Mode: Tap to place wooden wall (Cost: 5 wood), Rotate to rotate";
-                    } else if (buildMode === "metal") {
-                        buildModeDisplay.textContent = "Build Mode: Tap to place metal wall (Cost: 3 metal), Rotate to rotate";
-                    } else {
-                        buildModeDisplay.textContent = "Tap Wood or Metal to Build";
-                    }
-                }
-            }
-            break;
-        case 'r':
-            if (isPressed && buildMode) {
-                rotationAngle = (rotationAngle + 90) % 360;
-                if (buildModeDisplay) {
-                    if (buildMode === "wood") {
-                        buildModeDisplay.textContent = `Build Mode: Tap to place wooden wall (Cost: 5 wood), Rotate to rotate, Angle: ${rotationAngle}°`;
-                    } else if (buildMode === "metal") {
-                        buildModeDisplay.textContent = `Build Mode: Tap to place metal wall (Cost: 3 metal), Rotate to rotate, Angle: ${rotationAngle}°`;
-                    }
-                }
-                console.log("Rotation angle set to:", rotationAngle);
-            }
-            break;
-    }
-}
-
-function simulateClick() {
-    if (!gameInProgress) {
-        console.log("Game has not started yet. Please click 'Start Game' to begin.");
-        return;
-    }
-
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(mouse, camera);
-    raycaster.near = 0;
-    raycaster.far = 50;
-
-    if (buildMode === "wood") {
-        const groundIntersects = raycaster.intersectObject(ground);
-        if (groundIntersects.length > 0 && wood >= 5) {
-            const position = groundIntersects[0].point;
-            createWall(position, "wood");
-            wood -= 5;
-            updateWoodDisplay();
-            console.log("Wooden wall placed at:", position);
-            playSound(buildSound);
-        } else if (wood < 5) {
-            console.log("Not enough wood to build!");
-        }
-    } else if (buildMode === "metal") {
-        const groundIntersects = raycaster.intersectObject(ground);
-        if (groundIntersects.length > 0 && metal >= 3) {
-            const position = groundIntersects[0].point;
-            createWall(position, "metal");
-            metal -= 3;
-            updateMetalDisplay();
-            console.log("Metal wall placed at:", position);
-            playSound(buildSound);
-        } else if (metal < 3) {
-            console.log("Not enough metal to build!");
-        }
-    } else {
-        console.log("Checking for zombie hits...");
-        const intersects = raycaster.intersectObjects(zombies, false);
-        console.log("Intersects:", intersects.length, "Zombies array length:", zombies.length);
-        zombies.forEach((zombie, index) => {
-            console.log(`Zombie ${index} position:`, zombie.position);
-        });
-        if (intersects.length > 0) {
-            const zombie = intersects[0].object;
-            const damage = 10;
-            zombie.health -= damage;
-            console.log(`Zombie hit! Type: ${zombie.type}, Health: ${zombie.health}/${zombie.maxHealth}`);
-
-            const healthRatio = zombie.health / zombie.maxHealth;
-            let originalColor;
-            switch (zombie.type) {
-                case "normal":
-                    originalColor = 0xFF0000;
-                    break;
-                case "strong":
-                    originalColor = 0x800000;
-                    break;
-                case "fast":
-                    originalColor = 0x800080;
-                    break;
-                case "tank":
-                    originalColor = 0x00FF00;
-                    break;
-            }
-            const color = new THREE.Color(originalColor);
-            color.multiplyScalar(healthRatio);
-            zombie.material.color.set(color);
-
-            if (zombie.health <= 0) {
-                console.log("Zombie killed at:", zombie.position, "Type:", zombie.type);
-                scene.remove(zombie);
-                zombies.splice(zombies.indexOf(zombie), 1);
-                wood += zombie.drops.wood;
-                metal += zombie.drops.metal;
-                console.log("Before update - Wood:", wood, "Metal:", metal);
-                updateWoodDisplay();
-                updateMetalDisplay();
-                console.log("After update - Wood:", wood, "Metal:", metal);
-                console.log(`Gained ${zombie.drops.wood} wood and ${zombie.drops.metal} metal for killing ${zombie.type} zombie! Total wood:`, wood, "Total metal:", metal);
-                score += 10;
-                updateScoreDisplay();
-                console.log("Score increased to:", score);
-                playSound(shootSound);
-            } else {
-                console.log(`Zombie still alive! Health remaining: ${zombie.health}`);
-            }
-        } else {
-            console.log("No zombies hit. Camera position:", camera.position, "Looking at:", camera.getWorldDirection(new THREE.Vector3()));
-        }
-    }
-}
-
-function setupTouchControls() {
-    if (!isTouchDevice) return;
-
-    const moveUpButton = document.getElementById('moveUp');
-    const moveDownButton = document.getElementById('moveDown');
-    const moveLeftButton = document.getElementById('moveLeft');
-    const moveRightButton = document.getElementById('moveRight');
-    const shootButton = document.getElementById('shootButton');
-    const buildWoodButton = document.getElementById('buildWoodButton');
-    const buildMetalButton = document.getElementById('buildMetalButton');
-    const rotateButton = document.getElementById('rotateButton');
-
-    moveUpButton.addEventListener('touchstart', () => simulateKey('w', true));
-    moveUpButton.addEventListener('touchend', () => simulateKey('w', false));
-    moveDownButton.addEventListener('touchstart', () => simulateKey('s', true));
-    moveDownButton.addEventListener('touchend', () => simulateKey('s', false));
-    moveLeftButton.addEventListener('touchstart', () => simulateKey('a', true));
-    moveLeftButton.addEventListener('touchend', () => simulateKey('a', false));
-    moveRightButton.addEventListener('touchstart', () => simulateKey('d', true));
-    moveRightButton.addEventListener('touchend', () => simulateKey('d', false));
-
-    shootButton.addEventListener('touchstart', (event) => {
-        event.preventDefault();
-        mouse.x = 0;
-        mouse.y = 0;
-        simulateClick();
-    });
-    buildWoodButton.addEventListener('touchstart', (event) => {
-        event.preventDefault();
-        simulateKey('b', true);
-    });
-    buildMetalButton.addEventListener('touchstart', (event) => {
-        event.preventDefault();
-        simulateKey('m', true);
-    });
-    rotateButton.addEventListener('touchstart', (event) => {
-        event.preventDefault();
-        simulateKey('r', true);
-    });
-
-    document.addEventListener('touchstart', (event) => {
-        if (event.target.classList.contains('touch-button')) return;
-        const touch = event.touches[0];
-        mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
-        if (buildMode) {
-            simulateClick();
-        }
-    });
-}
-
-// Update window resize handler
-window.addEventListener('resize', () => {
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    camera.aspect = width / height;
-    adjustCameraForDevice();
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-});
-
-// Update spawnInterval to limit zombies
-spawnInterval = setInterval(() => {
-    if (zombies.length < 10) {
-        for (let i = 0; i < 3; i++) {
-            spawnZombie();
-        }
-    }
-}, difficultySettings[difficulty].spawnInterval);
-
-// Call adjustCameraForDevice on load
-adjustCameraForDevice();
-
-// Update DOMContentLoaded to include touch controls
-document.addEventListener('DOMContentLoaded', () => {
-    applyDifficulty();
-
-    const difficultySelect = document.getElementById('difficultySelect');
-    if (difficultySelect) {
-        console.log("Difficulty select element found:", difficultySelect);
-        difficultySelect.value = difficulty;
-        difficultySelect.addEventListener('change', (event) => {
-            if (!gameInProgress) {
-                difficulty = event.target.value;
-                applyDifficulty();
-                console.log("Difficulty set to:", difficulty);
-            } else {
-                console.log("Cannot change difficulty during the game!");
-                difficultySelect.value = difficulty;
-            }
-        });
-    } else {
-        console.error("Could not find difficultySelect element! Defaulting to medium difficulty.");
-        difficulty = "medium";
-        applyDifficulty();
-    }
-
-    const startButton = document.getElementById('startButton');
-    if (startButton) {
-        startButton.addEventListener('click', startGame);
-        startButton.addEventListener('touchstart', (event) => {
-            event.preventDefault();
-            startGame();
-        });
-    } else {
-        console.error("Could not find startButton element!");
-    }
-
-    setupTouchControls();
-});
-
 function startGame() {
     const difficultySelect = document.getElementById('difficultySelect');
     if (difficultySelect) {
@@ -520,7 +244,7 @@ function startGame() {
         metalDisplay.style.left = '10px';
         metalDisplay.style.color = 'white';
         metalDisplay.style.fontSize = '24px';
-        healthDisplay.style.fontFamily = 'Arial';
+        metalDisplay.style.fontFamily = 'Arial';
         metalDisplay.style.zIndex = '1001';
         metalDisplay.style.opacity = '1';
         metalDisplay.style.visibility = 'visible';
@@ -600,21 +324,18 @@ function startGame() {
     player.position.set(0, 0.5, 5);
     scene.add(player);
 
-    gameInProgress = true; // Moved to before spawning zombies
+    gameInProgress = true;
 
     for (let i = 0; i < 3; i++) {
         spawnZombie();
     }
 
     clearInterval(spawnInterval);
-    // In startGame() and spawnInterval
-spawnInterval = setInterval(() => {
-    if (zombies.length < 10) { // Limit to 10 zombies at a time
+    spawnInterval = setInterval(() => {
         for (let i = 0; i < 3; i++) {
             spawnZombie();
         }
-    }
-}, difficultySettings[difficulty].spawnInterval);
+    }, difficultySettings[difficulty].spawnInterval);
 
     if (difficultySelect) {
         difficultySelect.disabled = true;
@@ -812,7 +533,7 @@ document.addEventListener('keyup', (event) => {
 
 // Zombie array and spawn function
 const zombies = [];
-const zombieGeometry = new THREE.BoxGeometry(1, 1, 1);
+const zombieGeometry = new THREE.BoxGeometry(2, 2, 2);
 
 function spawnZombie() {
     if (!gameInProgress) {
@@ -830,38 +551,40 @@ function spawnZombie() {
     zombie.lastAttack = 0;
 
     const rand = Math.random();
-    if (rand < 0.4) { // 40% chance for normal zombie
+    if (rand < 0.4) {
         zombie.type = "normal";
         zombie.speed = 0.03;
-        zombie.health = 20; // Normal zombie: 2 hits to kill (10 damage per hit)
-        zombie.maxHealth = 20; // Store max health for color scaling
+        zombie.health = 20;
+        zombie.maxHealth = 20;
         zombie.damage = difficultySettings[difficulty].zombieDamage;
-        zombie.material = new THREE.MeshBasicMaterial({ color: 0xFF0000 }); // Red
+        zombie.material = new THREE.MeshBasicMaterial({ color: 0xFF0000 });
         zombie.drops = { wood: 7, metal: 2 };
-    } else if (rand < 0.6) { // 20% chance for strong zombie
+    } else if (rand < 0.6) {
         zombie.type = "strong";
         zombie.speed = 0.02;
-        zombie.health = 40; // Strong zombie: 4 hits to kill
+        zombie.health = 40;
         zombie.maxHealth = 40;
         zombie.damage = difficultySettings[difficulty].zombieDamage * 2;
-        zombie.material = new THREE.MeshBasicMaterial({ color: 0x800000 }); // Dark red
+        zombie.material = new THREE.MeshBasicMaterial({ color: 0x800000 });
         zombie.drops = { wood: 10, metal: 5 };
-    } else if (rand < 0.9) { // 30% chance for fast zombie
+    } else if (rand < 0.9) {
         zombie.type = "fast";
         zombie.speed = 0.08;
-        zombie.health = 10; // Fast zombie: 1 hit to kill
+        zombie.health = 10;
         zombie.maxHealth = 10;
         zombie.damage = difficultySettings[difficulty].zombieDamage * 0.5;
-        zombie.material = new THREE.MeshBasicMaterial({ color: 0x800080 }); // Purple
+        zombie.material = new THREE.MeshBasicMaterial({ color: 0x800080 });
         zombie.drops = { wood: 5, metal: 1 };
-    } else { // 10% chance for tank zombie
+    } else {
         zombie.type = "tank";
-        zombie.speed = 0.01; // Very slow
-        zombie.health = 100; // Tank zombie: 10 hits to kill
+        zombie.speed = 0.01;
+        zombie.health = 100;
         zombie.maxHealth = 100;
-        zombie.damage = difficultySettings[difficulty].zombieDamage * 3; // High damage
-        zombie.material = new THREE.MeshBasicMaterial({ color: 0x00FF00 }); // Green for tank
-        zombie.drops = { wood: 20, metal: 10 }; // Higher rewards
+        zombie.damage = difficultySettings[difficulty].zombieDamage * 3;
+        zombie.material = new THREE.MeshBasicMaterial({ color: 0x00FF00 });
+        zombie.drops = { wood: 20, metal: 10 };
+        zombie.scale.set(1.5, 1.5, 1.5);
+        zombie.position.y = 1.5;
     }
 
     zombie.geometry.computeBoundingBox();
@@ -905,7 +628,6 @@ function updateZombies() {
             if (distanceToWall < 2) {
                 canMove = false;
                 if (currentTime - zombie.lastAttack >= 1000) {
-                    // Tank zombies deal more damage to walls
                     const wallDamage = zombie.type === "tank" ? 20 : 10;
                     wall.health -= wallDamage;
                     zombie.lastAttack = currentTime;
@@ -931,9 +653,8 @@ function updateZombies() {
         } else if (distanceToBase <= 0.5 && !attackedWall) {
             baseHealth -= zombie.damage;
             console.log(`Zombie reached base, dealing damage: ${zombie.damage}, New baseHealth: ${baseHealth}`);
-            // Add visual feedback
-            base.material.color.set(0xFF0000); // Turn base red temporarily
-            setTimeout(() => base.material.color.set(0x808080), 200); // Reset color after 200ms
+            base.material.color.set(0xFF0000);
+            setTimeout(() => base.material.color.set(0x808080), 200);
             updateHealthDisplay();
             scene.remove(zombie);
             zombies.splice(index, 1);
@@ -961,34 +682,6 @@ window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
-// Update the renderer and camera on window resize
-window.addEventListener('resize', () => {
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    camera.aspect = width / height;
-    camera.updateProjectionMatrix();
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Optimize for high-DPI screens
-});
-
-// Adjust camera FOV based on device
-function adjustCameraForDevice() {
-    const isMobile = window.innerWidth <= 768;
-    camera.fov = isMobile ? 60 : 90; // Narrower FOV on mobile for better visibility
-    camera.updateProjectionMatrix();
-}
-
-// Call this on load and resize
-adjustCameraForDevice();
-window.addEventListener('resize', () => {
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    camera.aspect = width / height;
-    adjustCameraForDevice();
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 });
 
 // Mouse movement for aiming
@@ -1046,30 +739,28 @@ document.addEventListener('click', () => {
         });
         if (intersects.length > 0) {
             const zombie = intersects[0].object;
-            // Deal damage to the zombie
-            const damage = 10; // 10 damage per hit
+            const damage = 10;
             zombie.health -= damage;
             console.log(`Zombie hit! Type: ${zombie.type}, Health: ${zombie.health}/${zombie.maxHealth}`);
 
-            // Update zombie color based on health (from original color to darker shade)
             const healthRatio = zombie.health / zombie.maxHealth;
             let originalColor;
             switch (zombie.type) {
                 case "normal":
-                    originalColor = 0xFF0000; // Red
+                    originalColor = 0xFF0000;
                     break;
                 case "strong":
-                    originalColor = 0x800000; // Dark red
+                    originalColor = 0x800000;
                     break;
                 case "fast":
-                    originalColor = 0x800080; // Purple
+                    originalColor = 0x800080;
                     break;
                 case "tank":
-                    originalColor = 0x00FF00; // Green
+                    originalColor = 0x00FF00;
                     break;
             }
             const color = new THREE.Color(originalColor);
-            color.multiplyScalar(healthRatio); // Darken as health decreases
+            color.multiplyScalar(healthRatio);
             zombie.material.color.set(color);
 
             if (zombie.health <= 0) {
@@ -1088,9 +779,7 @@ document.addEventListener('click', () => {
                 console.log("Score increased to:", score);
                 playSound(shootSound);
             } else {
-                // Play a hit sound or visual effect if the zombie is still alive
                 console.log(`Zombie still alive! Health remaining: ${zombie.health}`);
-                // Optionally play a different sound for a hit (e.g., a "hit" sound)
             }
         } else {
             console.log("No zombies hit. Camera position:", camera.position, "Looking at:", camera.getWorldDirection(new THREE.Vector3()));

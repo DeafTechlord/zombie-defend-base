@@ -29,8 +29,6 @@
             top: 0;
             left: 0;
             pointer-events: none;
-            width: 100%;
-            height: 100%;
         }
         #loadingScreen {
             position: absolute;
@@ -45,63 +43,6 @@
             align-items: center;
             z-index: 2000;
         }
-        #rendererContainer {
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-        .touch-controls {
-            position: absolute;
-            bottom: 10px;
-            width: 100%;
-            display: none;
-            pointer-events: auto;
-            z-index: 1001;
-        }
-        .movement-controls {
-            position: absolute;
-            left: 10px;
-            bottom: 10px;
-            display: grid;
-            grid-template-columns: repeat(3, 50px);
-            grid-gap: 5px;
-        }
-        .action-controls {
-            position: absolute;
-            right: 10px;
-            bottom: 10px;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-        .touch-button {
-            width: 50px;
-            height: 50px;
-            background-color: rgba(255, 255, 255, 0.5);
-            border: 2px solid #fff;
-            border-radius: 5px;
-            color: #fff;
-            font-size: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            touch-action: none;
-        }
-        .touch-button:active {
-            background-color: rgba(255, 255, 255, 0.8);
-        }
-        @media (max-width: 768px) {
-            .touch-controls {
-                display: block;
-            }
-            #healthDisplay, #woodDisplay, #metalDisplay, #buildModeDisplay, #scoreDisplay {
-                font-size: 16px !important;
-                top: auto !important;
-                bottom: 150px !important;
-            }
-        }
     </style>
 </head>
 <body>
@@ -114,32 +55,12 @@
         </select>
         <button id="startButton">Start Game</button>
     </div>
-    <div id="gameUI">
-        <div class="touch-controls">
-            <div class="movement-controls">
-                <div></div>
-                <div class="touch-button" id="moveUp">W</div>
-                <div></div>
-                <div class="touch-button" id="moveLeft">A</div>
-                <div></div>
-                <div class="touch-button" id="moveRight">D</div>
-                <div></div>
-                <div class="touch-button" id="moveDown">S</div>
-                <div></div>
-            </div>
-            <div class="action-controls">
-                <div class="touch-button" id="shootButton">Shoot</div>
-                <div class="touch-button" id="buildWoodButton">Wood</div>
-                <div class="touch-button" id="buildMetalButton">Metal</div>
-                <div class="touch-button" id="rotateButton">Rotate</div>
-            </div>
-        </div>
-    </div>
+    <div id="gameUI"></div>
 
-    <audio id="shootSound" src="assets/shoot.mp3"></audio>
-    <audio id="buildSound" src="assets/build.mp3"></audio>
-    <audio id="attackSound" src="assets/attack.mp3"></audio>
-    <audio id="gameoverSound" src="assets/gameover.mp3"></audio>
+    <audio id="shootSound" src="assets/shoot.wav"></audio>
+    <audio id="buildSound" src="assets/build.wav"></audio>
+    <audio id="attackSound" src="assets/attack.wav"></audio>
+    <audio id="gameoverSound" src="assets/gameover.wav"></audio>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
     <script src="game.js"></script>
